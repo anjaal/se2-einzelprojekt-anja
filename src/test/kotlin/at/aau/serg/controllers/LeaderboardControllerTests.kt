@@ -20,6 +20,7 @@ class LeaderboardControllerTests {
         controller = LeaderboardController(mockedService)
     }
 
+    //Testen, ob das Leaderboard korrekt nach der Score (DESC) sortiert wird
     @Test
     fun test_getLeaderboard_correctScoreSorting() {
         val first = GameResult(1, "first", 20, 20.0)
@@ -37,21 +38,25 @@ class LeaderboardControllerTests {
         assertEquals(third, res[2])
     }
 
+    //Testen, ob der Leaderboard bei gleichem Score nach kürzerer Spielzeit (ASC) sortiert wird
     @Test
-    fun test_getLeaderboard_sameScore_CorrectIdSorting() {
-        val first = GameResult(1, "first", 20, 20.0)
-        val second = GameResult(2, "second", 20, 10.0)
-        val third = GameResult(3, "third", 20, 15.0)
+    fun test_getLeaderboard_sameScore_CorrectSortingByTimeInSeconds() {
+        val slowest = GameResult(1, "slowestPlayer", 20, 20.0)
+        val fastest = GameResult(2, "fastestPlayer", 20, 10.0)
+        val medium = GameResult(3, "mediumPlayer", 20, 15.0)
 
-        whenever(mockedService.getGameResults()).thenReturn(listOf(second, first, third))
+        whenever(mockedService.getGameResults()).thenReturn(listOf(medium, slowest, fastest))
 
         val res: List<GameResult> = controller.getLeaderboard()
 
         verify(mockedService).getGameResults()
         assertEquals(3, res.size)
-        assertEquals(first, res[0])
-        assertEquals(second, res[1])
-        assertEquals(third, res[2])
+
+        //Sortiert nach kürzeste Spielzeit
+        //Erwartete Reihenfolge: 10 (fastest) -> 15 (medium) -> 20 (slowest)
+        assertEquals(fastest, res[0])
+        assertEquals(medium, res[1])
+        assertEquals(slowest, res[2])
     }
 
 }
