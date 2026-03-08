@@ -11,9 +11,9 @@ import org.springframework.web.bind.annotation.RestController
 class LeaderboardController(
     private val gameResultService: GameResultService
 ) {
-
+    //=> Liefert den Leaderboard sortiert zurück
+    //Aufgabenstellung 2.2.1: Score absteigend sortieren und bei gleichem Score, die kürzere Spielzeit zuerst
     @GetMapping
     fun getLeaderboard(): List<GameResult> =
-        gameResultService.getGameResults().sortedWith(compareBy({ -it.score }, { it.id }))
-
+        gameResultService.getGameResults().sortedWith(compareBy({ -it.score }, { it.timeInSeconds }))
 }
