@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HexaBrawl</title>
+<link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #f0d080;
+    --gold-dark: #8a6a20;
+    --parchment: #e8d5a3;
+    --parchment-dark: #c4a96b;
+    --ink: #2a1a08;
+    --ink-light: #4a3015;
+    --wood: #3d1f0a;
+    --wood-light: #6b3a1a;
+    --red-coin: #c0392b;
+    --blue-coin: #2980b9;
+    --green-coin: #27ae60;
+    --shadow: rgba(0,0,0,0.7);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'EB Garamond', serif;
+    background-color: #1a0e05;
+    color: var(--ink);
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  /* ── HERO / HEADER ── */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background:
+      linear-gradient(to bottom, rgba(10,5,2,0.6) 0%, rgba(30,15,5,0.3) 40%, rgba(10,5,2,0.8) 100%),
+      url('/mnt/user-data/uploads/1780584571150_image.png') center/cover no-repeat;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 200px;
+    background: linear-gradient(to bottom, transparent, #1a0e05);
+    pointer-events: none;
+  }
+
+  .hero-logo {
+    width: min(1000px, 88vw);
+    filter: drop-shadow(0 0 40px rgba(201,168,76,0.5)) drop-shadow(0 4px 20px rgba(0,0,0,0.9));
+    animation: logoFloat 4s ease-in-out infinite;
+    position: relative;
+    z-index: 2;
+  }
+
+  @keyframes logoFloat {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(-12px); }
+  }
+
+  .hero-tagline {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(0.9rem, 2.5vw, 1.3rem);
+    color: var(--gold-light);
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    margin-top: 1.5rem;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.9);
+    position: relative;
+    z-index: 2;
+    animation: fadeInUp 1.2s ease both;
+    animation-delay: 0.4s;
+  }
+
+  .hero-scroll-hint {
+    position: absolute;
+    bottom: 2.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--gold);
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .hero-scroll-hint::after {
+    content: '▼';
+    font-size: 1.2rem;
+  }
+
+  @keyframes pulse {
+    0%,100% { opacity: 0.5; }
+    50%      { opacity: 1; }
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: linear-gradient(135deg, rgba(20,10,3,0.97) 0%, rgba(40,20,5,0.97) 100%);
+    border-bottom: 2px solid var(--gold-dark);
+    box-shadow: 0 4px 30px rgba(0,0,0,0.8);
+    display: flex;
+    justify-content: center;
+    gap: clamp(1rem, 4vw, 3rem);
+    padding: 1rem 2rem;
+  }
+
+  nav a {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(0.65rem, 1.5vw, 0.85rem);
+    color: var(--gold);
+    text-decoration: none;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    transition: color 0.3s, text-shadow 0.3s;
+    position: relative;
+  }
+
+  nav a::after {
+    content: '';
+    position: absolute;
+    bottom: -4px; left: 0; right: 100%;
+    height: 1px;
+    background: var(--gold-light);
+    transition: right 0.3s;
+  }
+
+  nav a:hover { color: var(--gold-light); text-shadow: 0 0 12px var(--gold); }
+  nav a:hover::after { right: 0; }
+
+  /* ── SECTION WRAPPER ── */
+  section {
+    position: relative;
+    padding: clamp(3rem, 8vw, 6rem) clamp(1rem, 6vw, 4rem);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-full {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .section-bg {
+    background:
+      linear-gradient(rgba(15,8,2,0.85), rgba(15,8,2,0.85)),
+      url('/mnt/user-data/uploads/1780584556657_image.png') center/cover no-repeat fixed;
+  }
+
+  /* ── PARCHMENT CARD ── */
+  .parchment {
+    background:
+      radial-gradient(ellipse at 30% 20%, #f5e6c0 0%, #dfc080 40%, #c8a855 100%);
+    border: 3px solid var(--gold-dark);
+    border-radius: 4px;
+    padding: clamp(1.5rem, 4vw, 3rem);
+    position: relative;
+    box-shadow:
+      inset 0 0 60px rgba(100,60,10,0.3),
+      0 8px 40px rgba(0,0,0,0.7),
+      0 2px 0 var(--gold-light),
+      0 -2px 0 var(--gold-dark);
+  }
+
+  .parchment::before {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    border: 1px solid rgba(139,90,20,0.3);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+
+  /* ── SECTION TITLE ── */
+  .section-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(1.4rem, 4vw, 2.2rem);
+    color: var(--gold-dark);
+    text-align: center;
+    margin-bottom: 0.5rem;
+    text-shadow: 1px 1px 0 rgba(255,220,100,0.4);
+  }
+
+  .section-title-outer {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(1.5rem, 4vw, 2.4rem);
+    color: var(--gold-light);
+    text-align: center;
+    margin-bottom: 2.5rem;
+    text-shadow: 0 0 20px rgba(201,168,76,0.4), 2px 2px 0 rgba(0,0,0,0.8);
+    position: relative;
+  }
+
+  .section-title-outer::after {
+    content: '';
+    display: block;
+    width: 120px;
+    height: 2px;
+    background: linear-gradient(to right, transparent, var(--gold), transparent);
+    margin: 0.6rem auto 0;
+  }
+
+  .divider {
+    text-align: center;
+    color: var(--gold-dark);
+    font-size: 1.4rem;
+    letter-spacing: 1rem;
+    margin: 1rem 0 1.8rem;
+    opacity: 0.7;
+  }
+
+  /* ── ÜBER DAS SPIEL ── */
+  #about { background: linear-gradient(180deg, #1a0e05 0%, #0f0803 100%); }
+
+  .about-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  @media (max-width: 720px) { .about-grid { grid-template-columns: 1fr; } }
+
+  .about-text {
+    font-size: clamp(1rem, 2vw, 1.15rem);
+    line-height: 1.9;
+    color: var(--ink);
+  }
+
+  .about-text p + p { margin-top: 1rem; }
+
+  /* ── EINHEITEN ── */
+  #units { background: linear-gradient(180deg, #0f0803 0%, #140a03 100%); }
+
+  .units-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 2rem;
+    margin-top: 1rem;
+  }
+
+  .unit-card {
+    background: radial-gradient(ellipse at top, #f0dfa0 0%, #d4a840 100%);
+    border: 2px solid var(--gold-dark);
+    border-radius: 4px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 6px 30px rgba(0,0,0,0.6);
+    transition: transform 0.3s, box-shadow 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .unit-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(to right, transparent, var(--gold-light), transparent);
+  }
+
+  .unit-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 14px 50px rgba(0,0,0,0.8), 0 0 20px rgba(201,168,76,0.3);
+  }
+
+  .unit-card img {
+    width: 110px;
+    height: 110px;
+    object-fit: contain;
+    margin-bottom: 0.8rem;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+  }
+
+  .unit-name {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 0.4rem;
+  }
+
+  .unit-desc {
+    font-size: 0.9rem;
+    color: var(--ink-light);
+    line-height: 1.6;
+  }
+
+  .unit-badge {
+    display: inline-block;
+    background: var(--gold-dark);
+    color: var(--gold-light);
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    padding: 0.15rem 0.6rem;
+    border-radius: 2px;
+    margin-top: 0.5rem;
+  }
+
+  /* ── MÜNZEN ── */
+  .coins-row {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin: 2rem 0;
+  }
+
+  .coin-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .coin-item img {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.6));
+    transition: transform 0.3s;
+  }
+
+  .coin-item:hover img { transform: rotate(10deg) scale(1.1); }
+
+  .coin-label {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    letter-spacing: 0.1em;
+    color: var(--ink);
+  }
+
+  .coin-yellow .coin-label { color: #8a6a20; }
+  .coin-red    .coin-label { color: var(--red-coin); }
+  .coin-blue   .coin-label { color: var(--blue-coin); }
+  .coin-green  .coin-label { color: var(--green-coin); }
+  .coin-gray   .coin-label { color: #555; }
+
+  /* ── REGELN ── */
+  #rules { background: linear-gradient(180deg, #140a03 0%, #0f0803 100%); }
+
+  .rules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.8rem;
+  }
+
+  .rule-card {
+    background: radial-gradient(ellipse at top left, #f2e4b0 0%, #d6b055 100%);
+    border: 2px solid var(--gold-dark);
+    border-radius: 4px;
+    padding: 1.6rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    transition: transform 0.3s;
+  }
+
+  .rule-card:hover { transform: translateY(-4px); }
+
+  .rule-icon {
+    font-size: 2rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .rule-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--gold-dark);
+    margin-bottom: 0.6rem;
+  }
+
+  .rule-text {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--ink);
+  }
+
+  /* ── KAMPFSYSTEM ── */
+  #combat { background: linear-gradient(180deg, #0f0803 0%, #140a03 100%); }
+
+  .combat-triangle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin: 1.5rem 0;
+  }
+
+  .combat-node {
+    background: radial-gradient(ellipse at top, #f0dfa0 0%, #c9a030 100%);
+    border: 2px solid var(--gold-dark);
+    border-radius: 50%;
+    width: 130px;
+    height: 130px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0.8rem;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+    transition: transform 0.3s;
+  }
+
+  .combat-node:hover { transform: scale(1.08); }
+
+  .combat-node img {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+  }
+
+  .combat-node-name {
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-top: 0.3rem;
+  }
+
+  .combat-arrow {
+    font-size: 2rem;
+    color: var(--gold);
+    text-shadow: 0 0 10px rgba(201,168,76,0.6);
+  }
+
+  .combat-note {
+    text-align: center;
+    font-style: italic;
+    font-size: 1rem;
+    color: var(--parchment-dark);
+    margin-top: 1rem;
+  }
+
+  /* ── WIRTSCHAFT ── */
+  #economy { background: linear-gradient(180deg, #140a03 0%, #1a0e05 100%); }
+
+  .economy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.8rem;
+  }
+
+  .economy-card {
+    background: radial-gradient(ellipse at top, #f0e0a8 0%, #cca040 100%);
+    border: 2px solid var(--gold-dark);
+    border-radius: 4px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+
+  .economy-icon { font-size: 2.2rem; margin-bottom: 0.5rem; }
+
+  .economy-title {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    color: var(--gold-dark);
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+  }
+
+  .economy-text { font-size: 0.95rem; line-height: 1.7; color: var(--ink); }
+
+  .gold-amount {
+    display: inline-block;
+    background: var(--gold);
+    color: var(--ink);
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 2px;
+    margin: 0.1rem;
+  }
+
+  /* ── MAPS ── */
+  #maps {
+    background:
+      linear-gradient(rgba(10,5,2,0.88), rgba(10,5,2,0.88)),
+      url('/mnt/user-data/uploads/1780584571150_image.png') center/cover no-repeat fixed;
+    max-width: 100%;
+    padding: clamp(3rem, 8vw, 6rem) clamp(1rem, 6vw, 4rem);
+  }
+
+  .maps-inner { max-width: 1200px; margin: 0 auto; }
+
+  .maps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 2rem;
+  }
+
+  .map-card {
+    background: radial-gradient(ellipse at top, #2a1508 0%, #1a0c03 100%);
+    border: 2px solid var(--gold-dark);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+
+  .map-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 16px 60px rgba(0,0,0,0.9), 0 0 25px rgba(201,168,76,0.2);
+  }
+
+  .map-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+
+  .map-img-placeholder {
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: linear-gradient(135deg, #2a1a08, #4a2e10);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    border-bottom: 2px solid var(--gold-dark);
+  }
+
+  .map-info {
+    padding: 1.2rem;
+  }
+
+  .map-name {
+    font-family: 'Cinzel', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gold-light);
+    margin-bottom: 0.4rem;
+  }
+
+  .map-desc {
+    font-size: 0.9rem;
+    color: var(--parchment-dark);
+    line-height: 1.6;
+  }
+
+  .map-badge {
+    display: inline-block;
+    background: var(--gold-dark);
+    color: var(--gold-light);
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 2px;
+    margin-top: 0.6rem;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    background: linear-gradient(135deg, #0a0502 0%, #140a03 100%);
+    border-top: 2px solid var(--gold-dark);
+    text-align: center;
+    padding: 2.5rem 2rem;
+    font-family: 'Cinzel', serif;
+    font-size: 0.75rem;
+    color: var(--gold-dark);
+    letter-spacing: 0.15em;
+  }
+
+  footer .footer-logo {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.2rem;
+    color: var(--gold);
+    margin-bottom: 0.6rem;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  .fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ── ORNAMENT ── */
+  .ornament {
+    text-align: center;
+    color: var(--gold);
+    font-size: 1.5rem;
+    letter-spacing: 0.5rem;
+    margin: 1rem 0;
+    opacity: 0.6;
+  }
+
+  /* ── TABLE ── */
+  .styled-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+    margin-top: 1rem;
+  }
+
+  .styled-table th {
+    background: var(--gold-dark);
+    color: var(--gold-light);
+    font-family: 'Cinzel', serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    padding: 0.7rem 1rem;
+    text-align: left;
+  }
+
+  .styled-table td {
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid rgba(139,90,20,0.3);
+    color: var(--ink);
+  }
+
+  .styled-table tr:nth-child(even) { background: rgba(139,90,20,0.08); }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════
+     HERO
+══════════════════════════════════════════════════ -->
+<header class="hero">
+  <img class="hero-logo"
+       src="hexabrawl_images/title_image.png"
+       alt="HexaBrawl Logo">
+
+  <p class="hero-tagline">Das rundenbasierte Strategie-Schlachtfeld</p>
+  <div class="hero-scroll-hint">Erkunde das Reich</div>
+</header>
+<br>
+<br>
+
+<!-- ══════════════════════════════════════════════════
+     NAVIGATION
+══════════════════════════════════════════════════ -->
+<nav>
+  <a href="#about">Das Spiel</a>
+  <a href="#units">Einheiten</a>
+  <a href="#combat">Kampfsystem</a>
+  <a href="#economy">Wirtschaft</a>
+  <a href="#maps">Schlachtfelder</a>
+  <a href="#rules">Regeln</a>
+</nav>
+
+<!-- ══════════════════════════════════════════════════
+     ÜBER DAS SPIEL
+══════════════════════════════════════════════════ -->
+
+<div id="about" style="background: linear-gradient(180deg, #1a0e05 0%, #0f0803 100%); padding: 0 0 1rem;">
+  <section>
+    <h2 class="section-title-outer fade-in">Das Spiel</h2>
+    <div class="about-grid fade-in">
+      <div class="parchment">
+        <h3 class="section-title" style="font-size:1.3rem; margin-bottom:0.5rem;">Was ist HexaBrawl?</h3>
+        <div class="divider">⚔ ✦ ⚔</div>
+        <div class="about-text">
+          <p>HexaBrawl ist ein rundenbasiertes Strategiespiel auf einem Sechseckgitter. Zwei Spieler kämpfen um die Vorherrschaft, indem sie ihre Truppen geschickt einsetzen, Territorien erobern und ihre Wirtschaft aufbauen.</p>
+          <p>Jedes Feld deiner Farbe generiert Gold, das du in neue Einheiten und Farmen investieren kannst. Wer das gegnerische Territorium kontrolliert und die Wirtschaft des Feindes destabilisiert, gewinnt!</p>
+          <p>Das Spiel vereint taktisches Denken mit wirtschaftlicher Planung – jede Entscheidung zählt.</p>
+        </div>
+      </div>
+      <div class="parchment">
+        <h3 class="section-title" style="font-size:1.3rem; margin-bottom:0.5rem;">Tech-Stack</h3>
+        <div class="divider">⚙ ✦ ⚙</div>
+        <div class="about-text">
+          <p><strong>Frontend:</strong> Kotlin · Android SDK · Jetpack Compose · MVVM</p>
+          <p><strong>Backend:</strong> Kotlin · Spring Boot 3 · Spring WebSocket (STOMP) · PostgreSQL</p>
+          <p><strong>DevOps:</strong> GitHub Actions · SonarCloud · Feature-Branch Workflow</p>
+          <p><strong>Echtzeit:</strong> STOMP über WebSocket – server-autoritativer Spielzustand mit Live-Broadcasting an alle Teilnehmer.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     EINHEITEN
+══════════════════════════════════════════════════ -->
+<div id="units" style="background: linear-gradient(180deg, #0f0803 0%, #140a03 100%); padding: 0 0 1rem;">
+  <section>
+    <h2 class="section-title-outer fade-in">Die Einheiten</h2>
+
+    <!-- Münzen-Legende -->
+    <div class="parchment fade-in" style="margin-bottom:2.5rem;">
+      <h3 class="section-title" style="font-size:1.1rem; margin-bottom:0.3rem;">Spieler-Farben</h3>
+      <div class="divider">◆ ✦ ◆</div>
+      <div class="coins-row">
+        <div class="coin-item coin-yellow">
+          <img src="hexabrawl_images/figure_yellow_archer.png" alt="Gelbe Münze">
+          <span class="coin-label">Gelb</span>
+        </div>
+        <div class="coin-item coin-red">
+          <img src="hexabrawl_images/figure_red_archer.png" alt="Rote Münze">
+          <span class="coin-label">Rot</span>
+        </div>
+        <div class="coin-item coin-blue">
+          <img src="hexabrawl_images/figure_blue_archer.png" alt="Blaue Münze">
+          <span class="coin-label">Blau</span>
+        </div>
+        <div class="coin-item coin-green">
+          <img src="hexabrawl_images/figure_green_archer.png" alt="Grüne Münze">
+          <span class="coin-label">Grün</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Einheiten-Karten -->
+    <div class="units-grid fade-in">
+      <div class="unit-card">
+        <img src="hexabrawl_images/figure_blue_archer.png" alt="Bogenschütze">
+        <div class="unit-name">Bogenschütze</div>
+        <div class="unit-desc">Fernkämpfer mit hoher Reichweite. Schlägt Infanterie im direkten Duell.</div>
+        <div class="unit-badge">Schlägt: Infanterie</div>
+      </div>
+      <div class="unit-card">
+        <img src="hexabrawl_images/figure_blue_cavalry.png" alt="Kavallerie">
+        <div class="unit-name">Kavallerie</div>
+        <div class="unit-desc">Schnelle Reitereinheit. Überwältigt Bogenschützen durch ihre Geschwindigkeit.</div>
+        <div class="unit-badge">Schlägt: Bogenschütze</div>
+      </div>
+      <div class="unit-card">
+        <img src="hexabrawl_images/figure_blue_infantry.png" alt="Infanterie">
+        <div class="unit-name">Infanterie</div>
+        <div class="unit-desc">Standfeste Fußtruppe mit Schild. Besiegt Kavallerie im Nahkampf.</div>
+        <div class="unit-badge">Schlägt: Kavallerie</div>
+      </div>
+      <div class="unit-card">
+        <img src="hexabrawl_images/figure_skeleton.png" alt="Grabstein">
+        <div class="unit-name">Grabstein</div>
+        <div class="unit-desc">Entsteht wenn eine Einheit fällt. Blockiert das Feld und kann nicht kämpfen.</div>
+        <div class="unit-badge" style="background:#555; color:#ccc;">Inaktiv</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     KAMPFSYSTEM
+══════════════════════════════════════════════════ -->
+<div id="combat" style="background: linear-gradient(180deg, #140a03 0%, #0f0803 100%); padding: 0 0 1rem;">
+  <section>
+    <h2 class="section-title-outer fade-in">Das Kampfsystem</h2>
+    <div class="parchment fade-in">
+      <h3 class="section-title" style="margin-bottom:0.3rem;">Schere · Stein · Papier</h3>
+      <div class="divider">⚔ ✦ ⚔</div>
+
+      <div class="combat-triangle">
+        <div class="combat-node">
+          <img src="hexabrawl_images/figure_blue_archer.png" alt="Bogenschütze">
+          <div class="combat-node-name">Bogenschütze</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:0.3rem;">
+          <span class="combat-arrow" title="Bogenschütze schlägt Infanterie">→</span>
+          <span style="font-family:'Cinzel',serif;font-size:0.65rem;color:var(--gold-dark);">schlägt</span>
+          <span class="combat-arrow" title="Kavallerie schlägt Bogenschütze">←</span>
+        </div>
+        <div class="combat-node">
+          <img src="hexabrawl_images/figure_blue_cavalry.png" alt="Infanterie">
+          <div class="combat-node-name">Infanterie</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:0.3rem;">
+          <span class="combat-arrow">→</span>
+          <span style="font-family:'Cinzel',serif;font-size:0.65rem;color:var(--gold-dark);">schlägt</span>
+          <span class="combat-arrow">←</span>
+        </div>
+        <div class="combat-node">
+          <img src="hexabrawl_images/figure_blue_infantry.png" alt="Kavallerie">
+          <div class="combat-node-name">Kavallerie</div>
+        </div>
+      </div>
+
+      <p class="combat-note">Bei Gleichstand (gleicher Einheitentyp) sterben beide Einheiten sofort.</p>
+
+      <div style="margin-top:1.5rem;">
+        <table class="styled-table">
+          <thead>
+            <tr>
+              <th>Angreifer</th>
+              <th>Besiegt</th>
+              <th>Ergebnis</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Infanterie</td><td>Kavallerie</td><td>Angreifer rückt vor</td></tr>
+            <tr><td>Kavallerie</td><td>Bogenschütze</td><td>Angreifer rückt vor</td></tr>
+            <tr><td>Bogenschütze</td><td>Infanterie</td><td>Angreifer rückt vor</td></tr>
+            <tr><td>Gleicher Typ</td><td>–</td><td>Beide werden entfernt</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     WIRTSCHAFT
+══════════════════════════════════════════════════ -->
+<div id="economy" style="background: linear-gradient(180deg, #0f0803 0%, #140a03 100%); padding: 0 0 1rem;">
+  <section>
+    <h2 class="section-title-outer fade-in">Wirtschaft & Unterhalt</h2>
+    <div class="economy-grid fade-in">
+      <div class="economy-card">
+        <div class="economy-icon">🏰</div>
+        <div class="economy-title">Territorium & Gold</div>
+        <div class="economy-text">Jedes Feld deiner Farbe generiert <span class="gold-amount">+1 Gold</span> pro Runde. Alle Einnahmen fließen in eine gemeinsame Schatzkammer.</div>
+      </div>
+      <div class="economy-card">
+        <div class="economy-icon">⚔️</div>
+        <div class="economy-title">Unterhalt der Armee</div>
+        <div class="economy-text">Jede Einheit kostet pro Runde Gold. Die erste Einheit kostet <span class="gold-amount">3 Gold</span>, jede weitere +1 Gold mehr. Bei 3 Einheiten: 3 + 4 + 5 = <span class="gold-amount">12 Gold</span> pro Runde.</div>
+      </div>
+      <div class="economy-card">
+        <div class="economy-icon">🏚️</div>
+        <div class="economy-title">Farmen</div>
+        <div class="economy-text">Farmen erhöhen dein Einkommen permanent um <span class="gold-amount">+3 Gold</span> pro Runde. Jede weitere Farm kostet mehr: 1. Farm <span class="gold-amount">10G</span> · 2. Farm <span class="gold-amount">11G</span> · 3. Farm <span class="gold-amount">12G</span> …</div>
+      </div>
+      <div class="economy-card">
+        <div class="economy-icon">💀</div>
+        <div class="economy-title">Insolvenz</div>
+        <div class="economy-text">Kannst du den Unterhalt nicht bezahlen, bist du insolvent. Dein Gold wird auf 0 gesetzt und alle Einheiten verwandeln sich in Grabsteine.</div>
+      </div>
+      <div class="economy-card">
+        <div class="economy-icon">⛔</div>
+        <div class="economy-title">Inaktive Gebiete</div>
+        <div class="economy-text">Wird ein Gebietsteil vom Hauptzentrum abgeschnitten, wird er inaktiv. Inaktive Felder bringen <span class="gold-amount">0 Gold</span> und alle Truppen sterben sofort.</div>
+      </div>
+      <div class="economy-card">
+        <div class="economy-icon">🔗</div>
+        <div class="economy-title">Verbindung erneuern</div>
+        <div class="economy-text">Stellst du die Verbindung zum abgeschnittenen Gebiet wieder her, wird es reaktiviert und generiert wieder <span class="gold-amount">1 Gold</span> pro Feld.</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCHLACHTFELDER / MAPS
+══════════════════════════════════════════════════ -->
+<div id="maps" style="background: linear-gradient(rgba(10,5,2,0.88), rgba(10,5,2,0.88)), url('/mnt/user-data/uploads/1780584571150_image.png') center/cover no-repeat fixed; padding: 3rem 1rem;">
+  <div class="maps-inner">
+    <h2 class="section-title-outer fade-in" style="color:var(--gold-light);">Die Schlachtfelder</h2>
+    <div class="maps-grid fade-in">
+      <div class="map-card">
+        <div class="map-img-placeholder">
+          <img src="hexabrawl_images/dual_valley.png" alt="Duel Valley" class="map-img">        
+        </div>
+        <div class="map-info">
+          <div class="map-name">Duel Valley</div>
+          <div class="map-desc">Ein enges Tal mit zwei symmetrischen Seiten – perfekt für 1v1 Duelle.</div>
+          <span class="map-badge">2 Spieler</span>
+        </div>
+      </div>
+      <div class="map-card">
+        <div class="map-img-placeholder">
+          <img src="hexabrawl_images/triad_outpost.png" alt="Triad Outpost" class="map-img">        
+        </div>
+        <div class="map-info">
+          <div class="map-name">Triad Outpost</div>
+          <div class="map-desc">Ein Außenposten mit drei strategischen Kontrollpunkten. Wer die Mitte hält, kontrolliert das Gold.</div>
+          <span class="map-badge">2–3 Spieler</span>
+        </div>
+      </div>
+      <div class="map-card">
+        <div class="map-img-placeholder">
+          <img src="hexabrawl_images/battlefield_peaks.png" alt="Battlefield Peaks" class="map-img">        
+        </div>
+        <div class="map-info">
+          <div class="map-name">Battlefield Peaks</div>
+          <div class="map-desc">Zerklüftetes Gebirge mit engen Pässen. Kavallerie verliert hier ihren Geschwindigkeitsvorteil.</div>
+          <span class="map-badge">2–4 Spieler</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     REGELN
+══════════════════════════════════════════════════ -->
+<div id="rules" style="background: linear-gradient(180deg, #140a03 0%, #1a0e05 100%); padding: 0 0 2rem;">
+  <section>
+    <h2 class="section-title-outer fade-in">Spielregeln</h2>
+    <div class="rules-grid fade-in">
+      <div class="rule-card">
+        <div class="rule-icon">🎯</div>
+        <div class="rule-title">Bewegung & Eroberung</div>
+        <div class="rule-text">Einheiten können sich pro Runde bis zu drei Felder weit bewegen. Nur Randfelder des eigenen Gebiets können eingenommen werden.</div>
+      </div>
+      <div class="rule-card">
+        <div class="rule-icon">🔄</div>
+        <div class="rule-title">Zugwechsel</div>
+        <div class="rule-text">Nach jedem gültigen Zug wechselt die Kontrolle automatisch zum anderen Spieler. Es gibt keine separate „Zug beenden"-Aktion.</div>
+      </div>
+      <div class="rule-card">
+        <div class="rule-icon">🪦</div>
+        <div class="rule-title">Grabsteine</div>
+        <div class="rule-text">Grabsteine entstehen wenn eine Einheit stirbt – durch Kampf, Abschneiden oder Insolvenz. Sie blockieren das Feld bis sie entfernt werden.</div>
+      </div>
+      <div class="rule-card">
+        <div class="rule-icon">🏠</div>
+        <div class="rule-title">Hauptzentrum</div>
+        <div class="rule-text">Jeder Spieler startet mit einem Haus als Basis. Das Hauptzentrum ist der Ankerpunkt aller aktiven Gebiete – es darf nicht verloren gehen.</div>
+      </div>
+      <div class="rule-card">
+        <div class="rule-icon">❌</div>
+        <div class="rule-title">Fehler & Validierung</div>
+        <div class="rule-text">Ungültige Züge (falscher Spieler, Einheit nicht gefunden, Ziel blockiert) werden abgelehnt. Nur der betroffene Spieler erhält eine Fehlermeldung.</div>
+      </div>
+      <div class="rule-card">
+        <div class="rule-icon">🃏</div>
+        <div class="rule-title">Schummelfunktion</div>
+        <div class="rule-text">Klicks du auf das Geschenk-Symbol, kannst du zufällig zwischen +10 und -10 Gold gewinnen oder verlieren 
+          <p>VORSICHT: Dein Gegner sieht deine Aktion und kann versuchen, das Geschenk blind zu stehlen!</p></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════════════ -->
+<footer>
+  <div class="footer-logo">HexaBrawl</div>
+  <p>Software Engineering 2 · AAU Klagenfurt · 2026</p>
+  <p style="margin-top:0.4rem; opacity:0.5;">Entwickelt von Team HexaBrawl</p>
+</footer>
+
+<script>
+  // Fade-in on scroll
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
